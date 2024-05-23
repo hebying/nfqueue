@@ -91,8 +91,19 @@ def cleanup_logs():
             if current_date - file_creation_time > timedelta(days=7):
                 os.remove(file_path)
 
-# 每天的固定时间执行清理日志的任务
-schedule.every().day.at("01:00").do(cleanup_logs)
+# 每分钟执行清理日志的任务
+schedule.every(60).minutes.do(cleanup_logs)
+
+def run_scheduler():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+# 创建一个线程运行调度器
+import threading
+scheduler_thread = threading.Thread(target=run_scheduler)
+scheduler_thread.daemon = True
+scheduler_thread.start()
 
 queue = netfilterqueue.NetfilterQueue()
 queue.bind(5080, packet_handler)
