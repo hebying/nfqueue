@@ -34,7 +34,7 @@ def packet_handler(pkt):
         # 只对接收到的数据包为 "200 OK" 进行处理
         if "200 OK" in decoded_payload:
             # 匹配 SIP 消息头Contact中的 IP和端口
-            sip_header_pattern = r'Contact:\s*<sip:(.*?)@(.*?):(\d+)'
+            sip_header_pattern = r'Contact:\s*<sip:(.*?)@(.*?)(?::(\d+))?(;.*?)?>'
             sip_header_match = re.search(sip_header_pattern, decoded_payload)
 
             log += "\n\n---- The current packet is 200 ok. src_ip: " + str(src_ip) + ", src_port:" + str(src_port) + "\n\n"
@@ -43,7 +43,10 @@ def packet_handler(pkt):
                 # 获取匹配到Contact中的 IP和端口
                 contact_user = sip_header_match.group(1)
                 contact_ip = sip_header_match.group(2)
-                contact_port = sip_header_match.group(3)
+                contact_port = sip_header_match.group(3) or "5060"
+                contact_port_5060 = sip_header_match.group(3)
+
+                log += "\n\n---- The current packet is 200 ok. contact_ip: " + str(contact_ip) + ", contact_port:" + str(contact_port) + "\n\n"
 
                 # 判断Contact中的 IP和端口 是否与 源IP和端口 一致
                 if str(contact_ip) == str(src_ip) and str(contact_port) == str(src_port):
@@ -52,7 +55,10 @@ def packet_handler(pkt):
                     log += "\n\n---- Contact IP and Port are NOT consistent with the Source IP and Port.\n\n"
 
                     # 替换消息体中的Contact内容 为 来源IP:来源端口
-                    modified_payload = decoded_payload.replace(f'Contact: <sip:{contact_user}@{contact_ip}:{contact_port}', f'Contact: <sip:{contact_user}@{src_ip}:{src_port}')
+                    if contact_port_5060:
+                        modified_payload = decoded_payload.replace(f'Contact: <sip:{contact_user}@{contact_ip}:{contact_port}', f'Contact: <sip:{contact_user}@{src_ip}:{src_port}')
+                    else:
+                        modified_payload = decoded_payload.replace(f'Contact: <sip:{contact_user}@{contact_ip}', f'Contact: <sip:{contact_user}@{src_ip}:{src_port}')
 
                     # 打印修改后的消息体
                     log += 'Modified message:\n' + modified_payload
